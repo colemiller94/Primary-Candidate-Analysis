@@ -19,3 +19,4 @@ Julián Castro https://twitter.com/JulianCastro
 Eric Swalwell https://twitter.com/ericswalwell
 Tulsi Gabbard https://twitter.com/TulsiGabbard
 Jay Inslee https://twitter.com/JayInslee
+Pete Buttigieg https://twitter.com/PeteButtigieg
