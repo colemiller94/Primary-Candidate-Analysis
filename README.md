@@ -25,3 +25,7 @@ Mike Gravel https://twitter.com/MikeGravel
 Wayne Messam https://twitter.com/WayneMessam
 Tim Ryan https://twitter.com/TimRyan
 Marianne Willamson https://twitter.com/marwilliamson
+
+## Sources:
+Tweepy Stream Tutorial
+https://www.youtube.com/watch?v=wlnx-7cm4Gg
