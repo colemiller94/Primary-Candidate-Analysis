@@ -25,6 +25,7 @@ Mike Gravel https://twitter.com/MikeGravel
 Wayne Messam https://twitter.com/WayneMessam
 Tim Ryan https://twitter.com/TimRyan
 Marianne Willamson https://twitter.com/marwilliamson
+Stacey Abrams https://twitter.com/staceyabrams
 
 ## Sources:
 Tweepy Stream Tutorial
