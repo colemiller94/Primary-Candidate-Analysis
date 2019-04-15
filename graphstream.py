@@ -73,15 +73,22 @@ def ent_parser(ents):
     output['media']= media_to_nodes(dents)
     return {k:v for (k,v) in output.items() if v}
 
-
+#testing
 def user_dtn(datadict):
 #     if datadict['id'] in user_ids:
 #         return dict_to_node(datadict,'Target',primarykey='id',primarylabel='User',)
     return dict_to_node(datadict,'User',primarykey='id',primarylabel='User')
 
 def seperate_children(tweet):
-    retweeted = tweet.pop('retweeted_status')
-    quoted = tweet.pop('quoted_status')
+    try:
+        retweeted = tweet.pop('retweeted_status')
+    except:
+        retweeted = []
+    try:
+        quoted = tweet.pop('quoted_status')
+    except:
+        quoted = []
+
     output=defaultdict(int)
     output['user'] = tweet.pop('user')
     output['ents'] = tweet.pop('entities')
