@@ -80,8 +80,15 @@ def user_dtn(datadict):
     return dict_to_node(datadict,'User',primarykey='id',primarylabel='User')
 
 def seperate_children(tweet):
-    retweeted = tweet.pop('retweeted_status')
-    quoted = tweet.pop('quoted_status')
+    try:
+        retweeted = tweet.pop('retweeted_status')
+    except:
+        retweeted = []
+    try:
+        quoted = tweet.pop('quoted_status')
+    except:
+        quoted = []
+
     output=defaultdict(int)
     output['user'] = tweet.pop('user')
     output['ents'] = tweet.pop('entities')
