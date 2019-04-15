@@ -38,16 +38,16 @@ if __name__ == '__main__':
 	'Andrew Yang','Julian Castro','Julián Castro','Eric Swalwell','Tulsi Gabbard',
 	'Jay Inslee','Pete Buttigieg', 'John Delaney','Mike Gravel','Wayne Messam',
 	'Tim Ryan','Marianne Willamson','Stacy Abrams','Mayor Pete']
-	user_list = ['JoeBiden','BernieSanders','KamalaHarris','CoryBooker',
-	'ewarren','BetoORourke','EricHolder','SherrodBrown','amyklobuchar',
-	'MikeBloomberg','Hickenlooper','SenGillibrand','AndrewYang','JulianCastro',
-	'ericswalwell','TulsiGabbard','JayInslee','PeteButtigieg','JohnDelaney',
-	'MikeGravel','WayneMessam','TimRyan','marwilliamson','staceyabrams']
+	tag_list += ['@JoeBiden','@BernieSanders','@KamalaHarris','@CoryBooker',
+	'@ewarren','@BetoORourke','@EricHolder','@SherrodBrown','@amyklobuchar',
+	'@MikeBloomberg','@Hickenlooper','@SenGillibrand','@AndrewYang','@JulianCastro',
+	'@ericswalwell','@TulsiGabbard','@JayInslee','@PeteButtigieg','@JohnDelaney',
+	'@MikeGravel','@WayneMessam','@TimRyan','@marwilliamson','@staceyabrams']
 	user_ids = ['939091','216776631','30354991','15808765','357606935','342863309','3333055535',
 	'24768753','33537967','16581604','117839957','72198806','2228878592','19682187','377609596',
 	'26637348','21789463','226222147','426028646','14709326','33954145','466532637','21522338',
 	'216065430']
-	filename = 'tweets.json'
+	filename = 'tweets_2.json'
 
 	streamer = TwitterStreamer()
 	streamer.stream_tweets(filename,tag_list,user_ids)

@@ -5,6 +5,31 @@ from collections import defaultdict
 from py2neo import Graph, Node, Relationship
 
 
+graph = Graph("bolt://localhost:7687", auth=("neo4j", "password")) 
+
+tag_list = ['Joe Biden','Bernie Sanders','Kamala Harris', 'Cory Booker',
+'Elizabeth Warren',"Beto O'Rourke","Beto ORourke",'Eric Holder','Sherrod Brown',
+'Amy Klobuchar','Michael Bloomberg','John Hickenlooper','Kirsten Gillibrand',
+'Andrew Yang','Julian Castro','Julián Castro','Eric Swalwell','Tulsi Gabbard',
+'Jay Inslee','Pete Buttigieg', 'John Delaney','Mike Gravel','Wayne Messam',
+'Tim Ryan','Marianne Willamson','Stacy Abrams','Mayor Pete']
+
+
+user_list = ['JoeBiden','BernieSanders','KamalaHarris','CoryBooker',
+'ewarren','BetoORourke','EricHolder','SherrodBrown','amyklobuchar',
+'MikeBloomberg','Hickenlooper','SenGillibrand','AndrewYang','JulianCastro',
+'ericswalwell','TulsiGabbard','JayInslee','PeteButtigieg','JohnDelaney',
+'MikeGravel','WayneMessam','TimRyan','marwilliamson','staceyabrams']
+
+tag_list += ["@"+name for name in user_list]
+
+
+
+user_ids = ['939091','216776631','30354991','15808765','357606935','342863309','3333055535',
+'24768753','33537967','16581604','117839957','72198806','2228878592','19682187','377609596',
+'26637348','21789463','226222147','426028646','14709326','33954145','466532637','21522338',
+'216065430']
+
 def get_timestamp(dt_ish):
     if isinstance(dt_ish,str):
         return pd.to_datetime(dt_ish).timestamp()
@@ -17,12 +42,12 @@ def dict_to_node(datadict,*labels,primarykey=None,primarylabel=None,):
         datadict['timestamp']=get_timestamp(datadict['created_at'])
     cleandict={}
     for key,value in datadict.items():
-        if isinstance(value,np.int64):
-            cleandict[key] = int(value)
-        elif not isinstance(value,(int,str,float)):
-            cleandict[key] = str(value)
+        if isinstance(datadict[key],np.int64):
+            cleandict[key] = int(datadict[key])
+        elif not isinstance(datadict[key],(int,str,float)):
+            cleandict[key] = str(datadict[key])
         else:
-            cleandict[key] = value
+            cleandict[key] = datadict[key]
 
     node = Node(*labels,**cleandict)
     node.__primarylabel__= primarylabel or labels[0]
@@ -57,15 +82,12 @@ def media_to_nodes(ents):
     if ents['media']:
         for each in ents['media']:
             each.pop('indices')
-
             out.append(dict_to_node(each,'Media',each['type'].title(),primarykey='id',primarylabel='Media'))
     return out
 
 def ent_parser(ents):
     output={}
     dents = defaultdict(int)
-
-
     dents.update(ents)
     output['hashtags']= hashtags_to_nodes(dents)
     output['mentions']= mentions_to_nodes(dents)
@@ -73,11 +95,12 @@ def ent_parser(ents):
     output['media']= media_to_nodes(dents)
     return {k:v for (k,v) in output.items() if v}
 
-#testing
 def user_dtn(datadict):
 #     if datadict['id'] in user_ids:
 #         return dict_to_node(datadict,'Target',primarykey='id',primarylabel='User',)
     return dict_to_node(datadict,'User',primarykey='id',primarylabel='User')
+
+
 
 def seperate_children(tweet):
     try:
@@ -90,8 +113,14 @@ def seperate_children(tweet):
         quoted = []
 
     output=defaultdict(int)
-    output['user'] = tweet.pop('user')
-    output['ents'] = tweet.pop('entities')
+    try:
+        output['user'] = tweet.pop('user')
+    except:
+        output['user']=[]
+    try:
+        output['ents'] = tweet.pop('entities')
+    except:
+        output['ents'] = []
     output['tweet'] = dict(tweet)
 
     if isinstance(retweeted,dict) and isinstance(quoted,dict):
@@ -118,44 +147,27 @@ def seperate_children(tweet):
 
     return output
 
-
-tag_list = ['Joe Biden','Bernie Sanders','Kamala Harris', 'Cory Booker',
-'Elizabeth Warren',"Beto O'Rourke","Beto ORourke",'Eric Holder','Sherrod Brown',
-'Amy Klobuchar','Michael Bloomberg','John Hickenlooper','Kirsten Gillibrand',
-'Andrew Yang','Julian Castro','Julián Castro','Eric Swalwell','Tulsi Gabbard',
-'Jay Inslee','Pete Buttigieg', 'John Delaney','Mike Gravel','Wayne Messam',
-'Tim Ryan','Marianne Willamson','Stacy Abrams','Mayor Pete']
-
-
-user_list = ['JoeBiden','BernieSanders','KamalaHarris','CoryBooker',
-'ewarren','BetoORourke','EricHolder','SherrodBrown','amyklobuchar',
-'MikeBloomberg','Hickenlooper','SenGillibrand','AndrewYang','JulianCastro',
-'ericswalwell','TulsiGabbard','JayInslee','PeteButtigieg','JohnDelaney',
-'MikeGravel','WayneMessam','TimRyan','marwilliamson','staceyabrams']
-
-tag_list += ["@"+name for name in user_list]
-
-
-
-user_ids = ['939091','216776631','30354991','15808765','357606935','342863309','3333055535',
-'24768753','33537967','16581604','117839957','72198806','2228878592','19682187','377609596',
-'26637348','21789463','226222147','426028646','14709326','33954145','466532637','21522338',
-'216065430']
-
 def push_tweet(tweetdict):
     dicts=seperate_children(tweetdict)
-    graph = Graph("bolt://localhost:7687", auth=("neo4j", "password"))
-
-
-    user=  user_dtn(dicts['user'])
+    tx = graph.begin()
+    if dicts['user']:
+        user =  user_dtn(dicts['user'])
+    else:
+        gaffer = user_dtn(dicts['tweet']['delete']['status'])
+        regret = dict_to_node(dicts['tweet']['delete']['status'],'Tweet')
+        deleted = Relationship(gaffer,'DELETES',regret,timestamp=dicts['tweet']['delete']['timestamp_ms'])
+        tx.merge(gaffer,primary_key='id')
+        tx.merge(regret,primary_key='id')
+        tx.merge(deleted)
+        tx.commit()
+        return
+        
     tweet = dict_to_node(dicts['tweet'],'Tweet')
 
-    tx = graph.begin()
     tx.merge(user,primary_key='id')
 
 
     if 'retweeted' in dicts.keys() and 'quoted' in dicts.keys():
-        print('both')
         tweet.add_label('Retweet')
         retweet = dict_to_node(dicts['retweeted'],'Tweet','Qtweet')
         quoted = dict_to_node(dicts['quoted'], 'Tweet')
@@ -206,12 +218,12 @@ def push_tweet(tweetdict):
 #                 tx.merge(contains)
 
         for ent,ls in ent_parser(dicts['qents']).items():
-            for each in ls:
-                print('each',each.__primarykey__,each.__primarylabel__)
+            if ls:
+                for each in ls:
 
-                contains= Relationship(quoted,'CONTAINS',each)
-                tx.merge(each,ent, primary_key=each.__primarykey__)
-                tx.merge(contains)
+                    contains= Relationship(quoted,'CONTAINS',each)
+                    tx.merge(each,ent, primary_key=each.__primarykey__)
+                    tx.merge(contains)
 
         for ent,ls in ent_parser(dicts['rents']).items():
             if ls:
@@ -223,7 +235,6 @@ def push_tweet(tweetdict):
 
 
     elif 'retweeted' in dicts.keys():
-        print('retweeted')
         tweet.add_label('Retweet')
         rtuser = user_dtn(dicts['rtuser'])
         retweet = dict_to_node(dicts['retweeted'],'Tweet')
@@ -249,17 +260,16 @@ def push_tweet(tweetdict):
         tx.merge(retweet,primary_key='id')
         tx.merge(tweeted2)
         tx.merge(retweeted)
-
         for ent,ls in ent_parser(dicts['rents']).items():
-            for each in ls:
-                contains= Relationship(retweet,'CONTAINS',each)
-                tx.merge(each,ent,primary_key=each.__primarykey__)
-                tx.merge(contains)
+            if ls:
+                for each in ls:
+                    contains= Relationship(retweet,'CONTAINS',each)
+                    tx.merge(each,ent,primary_key=each.__primarykey__)
+                    tx.merge(contains)
 
 
 
     elif 'quoted' in dicts.keys():
-        print('quoted')
         tweet.add_label('Qtweet')
         qtuser = user_dtn(dicts['qtuser'])
         quoted = dict_to_node(dicts['quoted'],'Tweet')
@@ -309,10 +319,11 @@ def push_tweet(tweetdict):
         tx.merge(user,primary_key='id')
         tx.merge(tweeted)
         for ent,ls in ent_parser(dicts['ents']).items():
-            for each in ls:
-                contains= Relationship(tweet,'CONTAINS',each)
-    #             subg = subg | contains
-                tx.merge(each,str(ent),primary_key=each.__primarykey__)
-                tx.merge(contains)
+            if ls:
+                for each in ls:
+                    contains= Relationship(tweet,'CONTAINS',each)
+        #             subg = subg | contains
+                    tx.merge(each,str(ent),primary_key=each.__primarykey__)
+                    tx.merge(contains)
 
     tx.commit()
