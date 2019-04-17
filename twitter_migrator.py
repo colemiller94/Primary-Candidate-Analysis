@@ -22,7 +22,7 @@ class StdOutListener(StreamListener):
 	def on_data(self,data):
 		try:
 			print(data)
-			with open(self.filename,'a') as fn:
+			with open(self.filename,'a+') as fn:
 				fn.write(data)
 			return True
 		except BaseException as e:
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 	'24768753','33537967','16581604','117839957','72198806','2228878592','19682187','377609596',
 	'26637348','21789463','226222147','426028646','14709326','33954145','466532637','21522338',
 	'216065430']
-	filename = 'tweets_2.json'
+	filename = 'tweets_3.json'
 
 	streamer = TwitterStreamer()
 	streamer.stream_tweets(filename,tag_list,user_ids)

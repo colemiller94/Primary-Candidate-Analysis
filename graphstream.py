@@ -3,7 +3,71 @@ import numpy as np
 from pprint import pprint
 from collections import defaultdict
 from py2neo import Graph, Node, Relationship
+import json
+import time
+from IPython.display import clear_output
+import spacy
+from spacy.tokens import Doc
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+import re
 
+def strip_tweets(tweet):
+    '''Process tweet text to remove retweets, mentions,links and hashtags.'''
+    retweet = r'RT:? ?@\w+:?'
+    tweet= re.sub(retweet,'',tweet)
+    mention = r'@\w+'
+    tweet= re.sub(mention,'',tweet)
+    links = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
+    tweet= re.sub(links,'',tweet)
+    tweet_links = r'https:\/\/t\.co\/\w+|http:\/\/t\.co\/\w+'
+    tweet=re.sub(tweet_links,'',tweet)  
+    tweet_link = r'http\S+'
+    tweet=re.sub(tweet_link,'',tweet)
+    hashtag = r'#\w+'
+    tweet= re.sub(hashtag,'',tweet)
+    return tweet
+
+nltk.download('vader_lexicon')
+
+sentiment_analyzer = SentimentIntensityAnalyzer()
+
+def migrate_flocks(flocks):
+    cnt=0
+    start=time.time()
+    for flock in flocks:
+        cnt+=1
+        for row in range(len(flock)):
+            if row%25 ==0:
+                d_bird = dict(flock.iloc[row])
+                push_tweet(d_bird)
+                print('Tweet!')
+        clear_output()
+        print(f'Time since migration: {time.time()-start} seconds' )
+        print(f'{cnt} batches parsed!')
+
+def polarity_scores(doc):
+    return sentiment_analyzer.polarity_scores(doc.text)
+
+def graph_sentiment(text):
+    tweet = nlp(strip_tweets(text))
+    return tweet._.polarity_scores['compound'],tweet.vector
+
+def encode_sentiment(tweet):
+    sentiment,embedding = graph_sentiment(tweet['text'])
+    sentiment=float(sentiment)
+    t_id=tweet['id_str']
+    if not isinstance(tweet['retweeted_status'],dict):
+        query = '''MERGE (t:Tweet {id_str: $id})
+        ON CREATE SET t.stranded = 1 
+        ON MATCH SET t.sentiment = $sentiment,
+            t.embedding = $embedding
+        '''
+        graph.run(query,id=t_id,sentiment=sentiment,embedding=list(embedding))
+        print('Sentimental')
+
+
+Doc.set_extension('polarity_scores', getter=polarity_scores)
 
 graph = Graph("bolt://localhost:7687", auth=("neo4j", "password")) 
 
@@ -22,7 +86,6 @@ user_list = ['JoeBiden','BernieSanders','KamalaHarris','CoryBooker',
 'MikeGravel','WayneMessam','TimRyan','marwilliamson','staceyabrams']
 
 tag_list += ["@"+name for name in user_list]
-
 
 
 user_ids = ['939091','216776631','30354991','15808765','357606935','342863309','3333055535',
@@ -150,7 +213,7 @@ def seperate_children(tweet):
 def push_tweet(tweetdict):
     dicts=seperate_children(tweetdict)
     tx = graph.begin()
-    if dicts['user']:
+    if isinstance(dicts['user'],dict):
         user =  user_dtn(dicts['user'])
     else:
         gaffer = user_dtn(dicts['tweet']['delete']['status'])
