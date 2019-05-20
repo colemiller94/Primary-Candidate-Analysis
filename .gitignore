@@ -105,6 +105,7 @@ venv.bak/
 
 #
 .DS_Store
+/Pictures/.DS_Store
 credentials.py
 notes.txt
 
